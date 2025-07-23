@@ -3,11 +3,15 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <HX711.h>
 #include "config.h"
+#include "utils.h"
 
 BLECharacteristic timeSeriesCharacteristic(TIME_SERIES_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
-
 bool deviceConnected = false;
+
+HX711 scale;
+float calibration_factor = 33; // this calibration factor is adjusted according to my load cell
 
 // BLE Callbacks
 class MyBLEServerCallbacks : public BLEServerCallbacks
@@ -55,11 +59,31 @@ void setup()
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
   Serial.println("Characteristic defined! Now you can read it in your phone!");
+
+  // Show the calibration message on the serial output
+  Serial.println("HX711 calibration sketch");
+  Serial.println("Remove all weight from scale");
+  Serial.println("After readings begin, place known weight on scale");
+  Serial.println("Press + or a to increase calibration factor");
+  Serial.println("Press - or z to decrease calibration factor");
+
+  // Begin the scale calibration
+  scale.begin(33, 32);
+  scale.set_scale();
+  scale.tare();                            // Reset the scale to 0
+  long zero_factor = scale.read_average(); // Get a baseline reading
+  Serial.print("Zero factor: ");           // This can be used to remove the need to tare the scale. Useful in permanent scale projects.
+  Serial.println(zero_factor);
 }
 
 void loop()
 {
-  timeSeriesCharacteristic.setValue("100"); // For now we only output a constant value
+  scale.set_scale(calibration_factor);          // Adjust to this calibration factor
+  float measurement = scale.get_units() / 1000; // Get the scale readings in gram and convert to kg
+  String measurementString = formatFloat(measurement);
+  Serial.println(measurementString.c_str());
+
+  timeSeriesCharacteristic.setValue(measurementString.c_str()); // For now we only output a constant value
   timeSeriesCharacteristic.notify();
-  delay(2000);
+  delay(100);
 }
