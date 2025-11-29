@@ -2,16 +2,25 @@
 #define WEB_CONTROLLER_H
 
 #include <ESPAsyncWebServer.h>
-#include "../Service/AbstractSensorService.h" // Dependency on the interface
+#include "../Service/AbstractMeasurementService.h"
+#include "../Service/AbstractCalibrationService.h"
+#include "../Service/AbstractBatteryService.h"
 
 class WebController
 {
 public:
-    // Uses Dependency Injection: takes the server and the abstract service interface
-    WebController(AsyncWebServer &server, AbstractSensorService &sensorService);
+    // Uses Dependency Injection for all three specialized services
+    WebController(
+        AsyncWebServer &server,
+        AbstractMeasurementService &measurementService,
+        AbstractCalibrationService &calibrationService,
+        AbstractBatteryService &batteryService);
 
 private:
-    AbstractSensorService &sensorService_; // Reference to the service interface
+    // References to the abstract interfaces
+    AbstractMeasurementService &measurementService_;
+    AbstractCalibrationService &calibrationService_;
+    AbstractBatteryService &batteryService_;
 
     // Handlers for the REST API endpoints
     void handleMeasurement(AsyncWebServerRequest *request);

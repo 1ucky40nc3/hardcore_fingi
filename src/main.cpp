@@ -4,8 +4,9 @@
 #include "config.h"
 #include "secrets.h"
 #include "WebController.h"
-#include "SensorService.h"
-#include "AbstractSensorService.h"
+#include "MeasurementService.h"
+#include "CalibrationService.h"
+#include "BatteryService.h"
 
 // Your network credentials
 const char *ssid = "YourWiFiSSID";
@@ -15,7 +16,9 @@ AsyncWebServer server(80);
 WebController *controller;
 
 // Get the concrete service instance (Singleton)
-SensorService &sensorService = SensorService::getInstance();
+MeasurementService &measurementService = MeasurementService::getInstance();
+CalibrationService &calibrationService = CalibrationService::getInstance();
+BatteryService &batteryService = BatteryService::getInstance();
 
 void setup()
 {
@@ -32,10 +35,13 @@ void setup()
     Serial.println("AP Failed to start!");
   }
 
-  // 2. Initialize Controller using the AbstractSensor interface (Dependency Injection)
-  // The controller receives the concrete SensorService instance but only sees its AbstractSensor methods.
-  controller = new WebController(server, sensorService);
-
+  // 2. Initialize Controller using the three Abstract Service interfaces
+  controller = new WebController(
+      server,
+      measurementService, // Passed as AbstractMeasurementService&
+      calibrationService, // Passed as AbstractCalibrationService&
+      batteryService      // Passed as AbstractBatteryService&
+  );
   // 3. Start Server
   server.begin();
   Serial.println("REST API server started.");
@@ -43,13 +49,15 @@ void setup()
 
 void loop()
 {
-  // The main loop calls the service's periodic logic
-  sensorService.updateSensorData();
+  // The main loop coordinates the periodic updates for each service
+  measurementService.updateRawMeasurement();
+  batteryService.updateBatteryCharge();
+
   // Print the current state for debugging
   Serial.printf("Status: Measurement=%.2f, Battery=%d%%, Factor=%.2f\n",
-                sensorService.getLatestMeasurement(),
-                sensorService.getBatteryCharge(),
-                sensorService.getCalibrationFactor());
+                measurementService.getLatestMeasurement(),
+                batteryService.getBatteryCharge(),
+                calibrationService.getCalibrationFactor());
 
   delay(5000);
 }
