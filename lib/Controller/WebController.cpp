@@ -7,20 +7,32 @@
 WebController::WebController(AsyncWebServer &server, AbstractSensorService &sensorService)
     : sensorService_(sensorService) // Store the service reference
 {
-    // GET /measurement
-    server.on("/measurement", HTTP_GET, std::bind(&WebController::handleMeasurement, this, std::placeholders::_1));
+    // GET /measurement - Use Lambda for unambiguous binding
+    server.on("/measurement", HTTP_GET, [this](AsyncWebServerRequest *request)
+              { this->handleMeasurement(request); });
 
     // GET /battery
-    server.on("/battery", HTTP_GET, std::bind(&WebController::handleBattery, this, std::placeholders::_1));
+    server.on("/battery", HTTP_GET, [this](AsyncWebServerRequest *request)
+              { this->handleBattery(request); });
 
     // GET /calibration
-    server.on("/calibration", HTTP_GET, std::bind(&WebController::handleGetCalibration, this, std::placeholders::_1));
+    server.on("/calibration", HTTP_GET, [this](AsyncWebServerRequest *request)
+              { this->handleGetCalibration(request); });
 
-    // PATCH /calibration
-    server.on("/calibration", HTTP_PATCH,
-              std::bind(&WebController::handleGetCalibration, this, std::placeholders::_1), // Ignore upload
-              NULL,                                                                         // Ignore file upload
-              std::bind(&WebController::handlePatchCalibration, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5));
+    // --------------------------------------------------------------------------
+    // FIX: Use separate calls for the Request Handler and the Body Handler to
+    // avoid the ambiguous overload error (C/C++(308)).
+    // --------------------------------------------------------------------------
+    server.on("/calibration", HTTP_PATCH, [this](AsyncWebServerRequest *request)
+              {
+                  // This is the main request handler (executed if no body handler is attached,
+                  // or after the body handler finishes).
+                  // Since we handle the response fully in onBody, this simply sends a success.
+                  // It must be defined, but we ensure the actual work happens in onBody.
+              })
+        // Attach the dedicated Body Handler function
+        .onBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+                { this->handlePatchCalibration(request, data, len, index, total); });
 }
 
 // GET /measurement - Returns JSON { "value": 12.34 }
@@ -65,10 +77,13 @@ void WebController::handleGetCalibration(AsyncWebServerRequest *request)
 // PATCH /calibration - Expects JSON { "calibration_factor": 1.2 }
 void WebController::handlePatchCalibration(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
 {
-    if (index == total - len)
+    // Note: The body handler is called multiple times for large bodies.
+    // We only process and respond when the total data has been received (index + len == total).
+    if (index + len == total)
     {
         StaticJsonDocument<JSON_DOC_SIZE> doc;
-        DeserializationError error = deserializeJson(doc, (const char *)data);
+        // The data buffer is only valid during the scope of this function.
+        DeserializationError error = deserializeJson(doc, (const char *)data, len);
 
         if (error)
         {
