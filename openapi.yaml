@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Sensor Management API
+  version: 1.0.0
+  description: API for accessing real-time sensor measurements, battery status, and configuring calibration.
+servers:
+  - url: /api/v1
+    description: Base URL for the Sensor API version 1
+paths:
+  /measurement:
+    get:
+      operationId: getLatestMeasurement
+      summary: Get the latest sensor measurement
+      responses:
+        '200':
+          description: Successful retrieval of the latest sensor measurement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Measurement'
+  /battery:
+    get:
+      operationId: getBatteryCharge
+      summary: Get the latest battery charge level
+      responses:
+        '200':
+          description: Successful retrieval of the battery charge level
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatteryCharge'
+  /calibration:
+    get:
+      operationId: getCalibration
+      summary: Get the current sensor calibration factor
+      responses:
+        '200':
+          description: Successful retrieval of the current calibration factor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calibration'
+    patch:
+      operationId: updateCalibrationFactor
+      summary: Update the sensor calibration factor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalibrationUpdate'
+      responses:
+        '200':
+          description: Calibration factor updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calibration'
+        '400':
+          description: Invalid input for calibration factor
+components:
+  schemas:
+    Measurement:
+      type: object
+      properties:
+        value:
+          type: number
+          format: float
+          description: The latest raw sensor measurement value.
+      required:
+        - value
+    BatteryCharge:
+      type: object
+      properties:
+        charge_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The current battery charge level in percentage (0 to 100).
+      required:
+        - charge_percent
+    Calibration:
+      type: object
+      properties:
+        calibration_factor:
+          type: number
+          format: float
+          description: The current sensor calibration factor.
+      required:
+        - calibration_factor
+    CalibrationUpdate:
+      type: object
+      properties:
+        calibration_factor:
+          type: number
+          format: float
+          description: The new sensor calibration factor to apply.
+      required:
+        - calibration_factor
