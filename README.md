@@ -108,6 +108,26 @@ This will automatically attach a gdb debugger and enable VSCode debugging.
 
 Set the configuration in the [config.h](lib/Config/config.h) header file. Use the provided constants as they are used in the code.
 
+### Secrets
+
+Provide the secrets in the [secrets.h](lib/Config/secrets.h) header file. This file provides constants which are used in the code. As part of the setup you have to create the [secrets.h](lib/Config/secrets.h) file at the `lib/Config/secrets.h` path. Use the following template to create the file
+
+```cpp
+/**
+ * @brief The WIFI SSID for a Wifi client.
+ *
+ * This Wifi SSID is used together with the `WIFI_PASSWORD` to create a Wifi access point (AP).
+ */
+const char *WIFI_SSID = "INSERT_YOUR_WIFI_SSID_HERE";
+
+/**
+ * @brief The Wifi password a Wifi client.
+ *
+ * This Wifi password is used together with the `WIFI_SSID` to create a Wifi access point (AP).
+ */
+const char *WIFI_PASSWORD = "INSERT_YOUR_WIFI_PASSWORD_HERE";
+```
+
 ## Sources
 
 - [Open Fingi Project]
